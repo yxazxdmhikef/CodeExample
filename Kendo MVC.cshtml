@@ -1,0 +1,54 @@
+﻿@using Base.UI.Presets
+@using WebUI.Extensions
+@model WebUI.Models.StandartTreeListView
+
+@{
+    var preset = (Base.UI.Presets.GridPreset)Model.Preset;
+    var config = Model.ViewModelConfig.ListView;
+}
+/*
+кастомный виджет иерархичного табличного представления
+*/
+
+@(Html.Kendo().TreeGrid<dynamic>()
+                .Name(Model.WidgetID)
+                .AutoBind(false)
+                .Columns(columns => columns.InitColumns(this))
+                .Sortable()
+                .Scrollable(config.Scrollable)                
+                .Selectable(s => {
+                    if (preset.IsMultiselect)
+                        s.Mode(TreeListSelectionMode.Multiple);
+                })
+                .Filterable(f => f.Extra(false).InitFilterable(this))
+                .Events(e => e.InitEvents(this))
+                .Pdf(pdf => pdf
+                    .FileName(Model.ViewModelConfig.ListView.Title + ".pdf")
+                    .ProxyURL("/api/kendo/export")
+                )
+                .Excel(e =>
+                {
+                    e.FileName(Model.ViewModelConfig.ListView.Title + ".xlsx");
+                    e.Filterable(true);
+                    e.ProxyURL("/api/kendo/export");
+                })
+                .DataSource(dataSource => dataSource
+                    .Model(a => a.InitModel(this)
+                    .Expanded(preset?.Expanded ?? false))
+                    .Sort(sort => sort.InitDataSourceSort(this))
+                    .Filter(filter => filter.InitDataSourceFilter(this))                    
+                    .PageSize(preset?.PageSize ?? 50)
+                    .Batch(true)
+                    .ServerOperation(true)
+                    .Events(events => events.Error(Model.WidgetID + ".onErrorHandler"))
+                .Read(read => read.InitRead($"listview/{Model.Mnemonic}/kendoTreeGrid", "api", Model.Mnemonic, Model.SearchStr, Model.SysFilter).Data(Model.WidgetID + ".onAdditionalData"))
+                .Aggregates(ag => ag.InitDataSourceAggregate(this))
+                )
+                .Reorderable(true)
+                .Resizable(true)
+                .Messages(m => m
+                    .NoRows("Нет данных")
+                    .Loading("Загрузка")
+                )
+                .Pageable(p => p.InitPageable(this))
+)
